@@ -81,7 +81,7 @@ public class {{ .TableNameHump }}Query extends Query {
     }
     {{- end -}}
     {{- end -}}
-    {{- end -}}
+    {{- end }}
 }
 `
 	entityTemp = `
@@ -316,14 +316,14 @@ to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Printf("Args:  \n"+
-			"host: %v\n"+
-			"port: %v\n"+
-			"user: %v\n"+
-			"password: %v\n"+
-			"database: %v\n"+
-			"rootPath: %v\n"+
-			"packagePath: %v\n", host, *port, user, password, databaseName, rootPath, packagePath)
+		//fmt.Printf("Args:  \n"+
+		//	"host: %v\n"+
+		//	"port: %v\n"+
+		//	"user: %v\n"+
+		//	"password: %v\n"+
+		//	"database: %v\n"+
+		//	"rootPath: %v\n"+
+		//	"packagePath: %v\n", host, *port, user, password, databaseName, rootPath, packagePath)
 		if databaseName == "" {
 			// fmt.Printf("Database name can not be null")
 			return errors.New("Database name can not be null")
@@ -375,17 +375,11 @@ to quickly create a Cobra application.`,
 				return
 			}
 			var templateData TemplateData
-			if tableName.TableName == "eb_system_group" || tableName.TableName == "eb_user" {
-				templateData.TableName = tableName.TableName
-				templateData.TableNameHump = toHump(strings.TrimPrefix(tableName.TableName, tablePrefix), true)
-				templateData.TableNote = tableName.Comment
-				templateData.PackagePath = packagePath
-				generateTable(templateData)
-				continue
-			} else {
-				continue
-			}
-			fmt.Printf("table: %v\n", tableName.TableName)
+			templateData.TableName = tableName.TableName
+			templateData.TableNameHump = toHump(strings.TrimPrefix(tableName.TableName, tablePrefix), true)
+			templateData.TableNote = tableName.Comment
+			templateData.PackagePath = packagePath
+			generateTable(templateData)
 		}
 	},
 }
