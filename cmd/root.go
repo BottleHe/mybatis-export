@@ -142,13 +142,13 @@ public interface {{ .TableNameHump }}Mapper {
     <resultMap id="{{- .TableNameHump -}}" type="{{- .PackagePath -}}.entity.domain.{{- .TableNameHump -}}">
 	{{- range $v := .Fields -}}
 	{{- if eq $v.IsPk 1 }}
-	<id column="{{- $v.Field -}}" Property="{{- $v.Property -}}" jdbcType="{{- $v.JdbcType -}}" />
+	<id column="{{- $v.Field -}}" property="{{- $v.Property -}}" jdbcType="{{- $v.JdbcType -}}" />
 	{{- else }}
-	<result column="{{ $v.Field }}" Property="{{ $v.Property }}" jdbcType="{{ $v.JdbcType }}" />
+	<result column="{{ $v.Field }}" property="{{ $v.Property }}" jdbcType="{{ $v.JdbcType }}" />
 	{{- end -}}
 	{{- end }}
     </resultMap>
-    <select id="list" resultMap="SystemConfig">
+    <select id="list" resultMap="{{.TableNameHump}}">
         select
         <choose>
             <when test="null != queryFields">
@@ -519,7 +519,6 @@ func generateTable(temp TemplateData) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Entity\n")
 	err = tempEntity.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
 	if err != nil {
 		panic(err)
@@ -530,7 +529,6 @@ func generateTable(temp TemplateData) {
 	if err != nil {
 		panic(err)
 	}
-	// fmt.Printf("Query\n")
 	err = tempQuery.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
 	if err != nil {
 		panic(err)
@@ -540,7 +538,6 @@ func generateTable(temp TemplateData) {
 	if err != nil {
 		panic(err)
 	}
-	// fmt.Printf("Mapper\n")
 	err = tempMapper.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
 	if err != nil {
 		panic(err)
