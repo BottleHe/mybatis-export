@@ -207,7 +207,7 @@ public interface {{ .TableNameHump }}Mapper {
         </choose>
     </select>
     <select id="count" resultType="java.lang.Integer">
-        select count(id) as cnt from {{- .TableName -}}
+        select count(id) as cnt from {{.TableName}}
         <where>
 			{{- range $v := .Fields -}}
 			{{ if or (eq $v.IsIndex 1) (eq $v.IsPk 1) }}
@@ -446,6 +446,9 @@ func generateTable(temp TemplateData) {
 		}
 		switch column.DataType {
 		case "int", "integer", "INT", "INTEGER":
+			column.JdbcType = "INTEGER"
+			column.JavaType = "Integer"
+		case "mediumint", "MEDIUMINT":
 			column.JdbcType = "INTEGER"
 			column.JavaType = "Integer"
 		case "varchar", "VARCHAR":
