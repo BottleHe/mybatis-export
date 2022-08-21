@@ -507,17 +507,8 @@ func generateTable(temp TemplateData) {
 		temp.Fields = append(temp.Fields, column)
 		// fmt.Printf("Field: %v, Property: %v, DataType: %v, Index: %v, IsIndex: %v, IsPk: %v, Comment: %v\n", column.Field, column.Property, column.DataType, column.Index, column.IsIndex, column.IsPk, column.Comment)
 	}
-	fmt.Printf("\n\n====================================MAPPER_XML=======================================\n\n")
-	templ, err := template.New("MapperXMLFile").Parse(mapperXmlTemp) // （2）解析模板
-	if err != nil {
-		panic(err)
-	}
-	err = templ.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
-	if err != nil {
-		panic(err)
-	}
 
-	fmt.Printf("\n\n====================================ENTITY=======================================\n\n")
+	fmt.Printf("\n\n====================================ENTITY[%s]=======================================\n\n", temp.TableNameHump)
 	tempEntity, err := template.New("Entity").Parse(entityTemp) // （2）解析模板
 	if err != nil {
 		panic(err)
@@ -527,7 +518,7 @@ func generateTable(temp TemplateData) {
 		panic(err)
 	}
 
-	fmt.Printf("\n\n====================================QUERY=======================================\n\n")
+	fmt.Printf("\n\n====================================QUERY[%sQuery]=======================================\n\n", temp.TableNameHump)
 	tempQuery, err := template.New("Query").Parse(queryTemp) // （2）解析模板
 	if err != nil {
 		panic(err)
@@ -536,12 +527,23 @@ func generateTable(temp TemplateData) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("\n\n====================================MAPPER=======================================\n\n")
+
+	fmt.Printf("\n\n====================================MAPPER[%sMapper]=======================================\n\n", temp.TableNameHump)
 	tempMapper, err := template.New("Mapper").Parse(mapperTemp) // （2）解析模板
 	if err != nil {
 		panic(err)
 	}
 	err = tempMapper.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("\n\n====================================MAPPER_XML[%sMapper.xml]=======================================\n\n", temp.TableNameHump)
+	templ, err := template.New("MapperXMLFile").Parse(mapperXmlTemp) // （2）解析模板
+	if err != nil {
+		panic(err)
+	}
+	err = templ.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
 	if err != nil {
 		panic(err)
 	}
