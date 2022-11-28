@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -448,60 +448,79 @@ func generateTable(temp TemplateData) {
 		case "int", "integer", "INT", "INTEGER":
 			column.JdbcType = "INTEGER"
 			column.JavaType = "Integer"
+			break
 		case "mediumint", "MEDIUMINT":
 			column.JdbcType = "INTEGER"
 			column.JavaType = "Integer"
+			break
 		case "varchar", "VARCHAR":
 			column.JdbcType = "VARCHAR"
 			column.JavaType = "String"
+			break
 		case "tinyint", "TINYINT":
 			column.JdbcType = "TINYINT"
 			column.JavaType = "Integer"
+			break
 		case "timestamp", "datetime", "TIMESTAMP", "DATETIME":
 			column.JdbcType = "TIMESTAMP"
 			column.JavaType = "java.sql.Timestamp"
+			break
 		case "time", "TIME":
 			column.JdbcType = "TIME"
 			column.JavaType = "java.sql.Time"
+			break
 		case "smallint", "SMALLINT":
 			column.JdbcType = "SMALLINT"
 			column.JavaType = "Integer"
+			break
 		case "real", "REAL":
 			column.JdbcType = "REAL"
 			column.JavaType = "Object"
+			break
 		case "numeric", "NUMERIC":
 			column.JdbcType = "NUMERIC"
 			column.JavaType = "BigDecimal"
+			break
 		case "float", "FLOAT":
 			column.JdbcType = "FLOAT"
 			column.JavaType = "Float"
+			break
 		case "double", "DOUBLE":
 			column.JdbcType = "DOUBLE"
 			column.JavaType = "Double"
+			break
 		case "decimal", "DECIMAL":
 			column.JdbcType = "DECIMAL"
 			column.JavaType = "BigDecimal"
+			break
 		case "date", "DATE":
 			column.JdbcType = "DATE"
 			column.JavaType = "java.sql.Date"
+			break
 		case "clob", "CLOB", "text", "TEXT":
 			column.JdbcType = "CLOB"
 			column.JavaType = "String"
+			break
 		case "char", "CHAR":
 			column.JdbcType = "CHAR"
 			column.JavaType = "String"
+			break
 		case "blob", "BLOB":
 			column.JdbcType = "BLOB"
 			column.JavaType = "Byte[]"
+			break
 		case "bit", "BIT":
 			column.JdbcType = "BIT"
 			column.JavaType = "Byte"
+			break
 		case "bigint", "BIGINT":
 			column.JdbcType = "BIGINT"
 			column.JavaType = "Long"
+			break
 		default:
 			column.JdbcType = ""
 			column.JavaType = "Object"
+			break
 
 		}
 		temp.Fields = append(temp.Fields, column)
