@@ -155,9 +155,13 @@ var (
 		Message: "Please provide query package, do not need to include the root package. The default value is \"model.query\"",
 		Default: "model.query",
 	}
-	tablePrefixQs = &survey.Input{
-		Message: "Please provide table prefix, e: table name is \"bt_order\", the prefix is \"bt_\"",
-		Default: "",
+	tablePrefixsQs = []*survey.Question{
+		{
+			Name: "tablePrefixs",
+			Prompt: &survey.Input{
+				Message: "Please provide some table prefix list, How to have multiple values, please use \",\" to separate",
+			},
+		},
 	}
 )
 
@@ -362,16 +366,18 @@ func (interact *Interact) AskIsOverwrite(what string) string {
 	return ret
 }
 
-func (interact *Interact) AskTablePrefix() string {
-	var tablePrefix string
-	if err := survey.AskOne(tablePrefixQs, &tablePrefix); nil != err {
+func (interact *Interact) AskTablePrefixs() []string {
+	answers := struct {
+		Value string `survey:"tablePrefixs"`
+	}{}
+	if err := survey.Ask(tablePrefixsQs, &answers); nil != err {
 		if terminal.InterruptErr == err {
 			Exit()
 			os.Exit(0)
 		}
-		return ""
+		return []string{}
 	}
-	return tablePrefix
+	return strings.Split(answers.Value, ",")
 }
 
 func Exit() {

@@ -32,13 +32,15 @@ import (
 )
 
 var (
-	host         string
-	user         string
-	password     string
-	port         *uint16
-	databaseName string
-	tableNames   []string
-	tablePrefix  string
+	isHelp             *bool
+	host               string
+	user               string
+	password           string
+	port               *uint16
+	databaseName       string
+	tableNames         []string
+	tablePrefixListStr string
+	tablePrefixs       []string
 
 	rootPath         string
 	rootPackagePath  string
@@ -162,9 +164,12 @@ to quickly create a Cobra application.`,
 			// fmt.Printf("Database name can not be null")
 			databaseName = interact.AskDBName()
 		}
-		if tablePrefix == "" {
-			tablePrefix = interact.AskTablePrefix()
+		if tablePrefixListStr == "" { // 说明没通过参数提供
+			tablePrefixs = interact.AskTablePrefixs()
+		} else {
+			tablePrefixs = strings.Split(strings.Trim(tablePrefixListStr, "\"' \t\n"), ",")
 		}
+
 		if *allTable {
 			tableNames = nil
 		} else {
@@ -254,7 +259,13 @@ to quickly create a Cobra application.`,
 			templateData.QueryPackage = queryPackage
 			templateData.MapperPackage = mapperPackage
 			templateData.QueryRootPackage = queryRootPackage
-			templateData.TableNameHump = toHump(strings.TrimPrefix(tableName.TableName, tablePrefix), true)
+			templateData.TableNameHump = toHump(tableName.TableName, true)
+			for _, v := range tablePrefixs {
+				if strings.HasPrefix(tableName.TableName, v) {
+					templateData.TableNameHump = toHump(strings.TrimPrefix(tableName.TableName, v), true)
+					break
+				}
+			}
 			templateData.TableNote = tableName.Comment
 			templateData.PackagePath = rootPackagePath
 			generateTable(&templateData)
@@ -287,7 +298,8 @@ func init() {
 	//	os.Exit(-1)
 	//}
 	//defaultDocumentRoot := fmt.Sprintf("%s%cDocuments%cexports", current.HomeDir, filepath.Separator, filepath.Separator)
-	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "", "The host of mysql")
+	isHelp = rootCmd.PersistentFlags().BoolP("help", "", false, "Help for this command")
+	rootCmd.PersistentFlags().StringVarP(&host, "host", "h", "", "The host of mysql")
 	port = rootCmd.PersistentFlags().Uint16P("port", "P", 0, "The port of mysql")
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "u", "", "The username of mysql")
 	rootCmd.PersistentFlags().StringVarP(&entityPackage, "entity-package", "e", "", "The package of the entity that needs to be generated, not including the root package")
@@ -297,7 +309,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "the password of mysql")
 	rootCmd.PersistentFlags().StringVar(&rootPath, "root-path", "", "the path of export directory")
 	rootCmd.PersistentFlags().StringVar(&rootPackagePath, "package", "", "the package path of generate, e.g: \"work.bottle\"")
-	rootCmd.PersistentFlags().StringVar(&tablePrefix, "table-prefix", "", "the table prefix of table name")
+	rootCmd.PersistentFlags().StringVar(&tablePrefixListStr, "table-prefix", "", "the table prefix of table name, How to have multiple values, please use \",\" to separate")
 	overwriteAll = rootCmd.PersistentFlags().BoolP("overwrite", "o", false, "overwrite all of exists files")
 	allTable = rootCmd.PersistentFlags().BoolP("all-table", "a", false, "generator all of table")
 }
@@ -406,9 +418,9 @@ func generateTable(temp *TemplateData) {
 		color.Green("Generate mapper[%s.%s.%sMapper] success.", temp.PackagePath, temp.MapperPackage, temp.TableNameHump)
 	}
 	if err := generate("mapper", config.MapperXmlTemp, mapperXmlPath, "xml", temp); nil != err {
-		color.Red("Generate mapper xml[%s%c%s%c%sMapper.xml] failed, err: %s\n", temp.PackagePath, filepath.Separator, mapperXmlPath, filepath.Separator, temp.TableNameHump, err.Error())
+		color.Red("Generate mapper xml[%s%c%s%c%sMapper.xml] failed, err: %s\n", rootPath, filepath.Separator, mapperXmlPath, filepath.Separator, temp.TableNameHump, err.Error())
 	} else {
-		color.Green("Generate mapper xml[%s%c%s%c%sMapper.xml] success.", temp.PackagePath, filepath.Separator, mapperXmlPath, filepath.Separator, temp.TableNameHump)
+		color.Green("Generate mapper xml[%s%c%s%c%sMapper.xml] success.", rootPath, filepath.Separator, mapperXmlPath, filepath.Separator, temp.TableNameHump)
 	}
 }
 
