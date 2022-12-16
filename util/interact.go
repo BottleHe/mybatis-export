@@ -2,10 +2,12 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type Interact struct {
@@ -97,7 +99,7 @@ var (
 		{
 			Name: "package",
 			Prompt: &survey.Input{
-				Message: "Please provide the java package ",
+				Message: "Please provide the java root package, e: com.google, com.github.aaa",
 				Default: "",
 			},
 			Validate: survey.Required,
@@ -121,6 +123,39 @@ var (
 				return nil
 			},
 		},
+	}
+	tableNamesIsAllQs = &survey.Confirm{
+		Message: "You did not provide a table name, are you processing all tables in the database?",
+		Default: true,
+	}
+	tableNamesQs = []*survey.Question{
+		{
+			Name: "tableNames",
+			Prompt: &survey.Input{
+				Message: "Please provide some table names, How to have multiple values, please use spaces to separate",
+			},
+			Validate: survey.Required,
+		},
+	}
+	entityPackageQs = &survey.Input{
+		Message: "Please provide the entity package, do not need to include the root package. The default value is \"entity\"",
+		Default: "entity",
+	}
+	mapperXmlPathQs = &survey.Input{
+		Message: "Please provide mapper xml path, do not need to include the root path. The default value is \"mapper\"",
+		Default: "mapper",
+	}
+	mapperPackageQs = &survey.Input{
+		Message: "Please provide mapper package, do not need to include the root package. The default value is \"mapper\"",
+		Default: "mapper",
+	}
+	queryPackageQs = &survey.Input{
+		Message: "Please provide query package, do not need to include the root package. The default value is \"model.query\"",
+		Default: "model.query",
+	}
+	tablePrefixQs = &survey.Input{
+		Message: "Please provide table prefix, e: table name is \"bt_order\", the prefix is \"bt_\"",
+		Default: "",
 	}
 )
 
@@ -199,4 +234,74 @@ func (interact *Interact) AskExportPath() string {
 		return wd
 	}
 	return answers.Value
+}
+
+func (interact *Interact) AskIsAllTableOfDB() bool {
+	ret := true
+	if err := survey.AskOne(tableNamesIsAllQs, &ret); nil != err {
+		return true
+	}
+	return ret
+}
+
+func (interact *Interact) AskTables() []string {
+	answers := struct {
+		Value string `survey:"tableNames"`
+	}{}
+	survey.Ask(tableNamesQs, &answers)
+	return strings.Split(answers.Value, " ")
+}
+
+func (interact *Interact) AskEntityPackage() string {
+	var entityPackage string
+	if err := survey.AskOne(entityPackageQs, &entityPackage); nil != err {
+		return "entity"
+	}
+	return entityPackage
+}
+
+func (interact *Interact) AskMapperPackage() string {
+	var mapperPackage string
+	if err := survey.AskOne(mapperPackageQs, &mapperPackage); nil != err {
+		return "mapper"
+	}
+	return mapperPackage
+}
+
+func (interact *Interact) AskMapperXmlPath() string {
+	var mapperXmlPath string
+	if err := survey.AskOne(mapperXmlPathQs, &mapperXmlPath); nil != err {
+		return "mapper"
+	}
+	return mapperXmlPath
+}
+
+func (interact *Interact) AskQueryPackage() string {
+	var queryPackage string
+	if err := survey.AskOne(queryPackageQs, &queryPackage); nil != err {
+		return "model.query"
+	}
+	return queryPackage
+}
+
+func (interact *Interact) AskIsOverwrite(what string) string {
+	msg := fmt.Sprintf("The file \"%s\" already exists, whether to overwrite", what)
+	overwriteQs := &survey.Select{
+		Message: msg,
+		Options: []string{"overwrite", "no", "overwrite all"},
+		Default: "no",
+	}
+	var ret string = "no"
+	if err := survey.AskOne(overwriteQs, &ret); nil != err {
+		return ret
+	}
+	return ret
+}
+
+func (interact *Interact) AskTablePrefix() string {
+	var tablePrefix string
+	if err := survey.AskOne(tablePrefixQs, &tablePrefix); nil != err {
+		return ""
+	}
+	return tablePrefix
 }

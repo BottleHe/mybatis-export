@@ -1,10 +1,163 @@
 package config
 
 const (
-	QueryTemp = `
-package {{ .PackagePath }}.model.query;
+	BaseQueryTemp = `
+package {{ .PackagePath }}.{{ .QueryRootPackage }};
 
-import {{ .PackagePath }}.model.Query;
+import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
+
+public abstract class Query<T> implements Serializable {
+    private String sortBy;
+    private String sortOrder;
+    private Integer page;
+    private Integer pageCnt;
+
+    private T data;
+
+    private Map<String, String> allowSortBy;
+    private Set<String> queryFields;
+
+    public Query() {
+        this.page = 1;
+        this.pageCnt = 20;
+        this.allowSortBy = initAllowSortBy();
+        this.queryFields = initQueryFields();
+    }
+
+    public String getSortBy() {
+        return sortBy;
+    }
+
+    public void setSortBy(String sortBy) {
+        if (null == allowSortBy) {
+            return;
+        }
+        if (!allowSortBy.containsKey(sortBy)) {
+            return;
+        }
+        this.sortBy = allowSortBy.get(sortBy);
+    }
+
+    public String getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(SortOrder sortOrder) {
+        if (null == sortOrder || (sortOrder != SortOrder.ASC && sortOrder != SortOrder.DESC)) {
+            this.sortOrder = "DESC";
+        } else {
+            this.sortOrder = sortOrder.toString();
+        }
+    }
+
+    public Integer getPage() {
+        if (null != this.page && this.page > 0) {
+            return this.page;
+        }
+        return 1;
+    }
+
+    public void setPage(Integer page) {
+        this.page = page;
+    }
+
+    public void nextPage() {
+        this.page++;
+    }
+
+    public void prevPage() {
+        this.page--;
+    }
+
+    public Integer getPageCnt() {
+        if (null == this.pageCnt || this.pageCnt <= 0) {
+            return 20;
+        }
+        return this.pageCnt;
+    }
+
+    public void setPageCnt(Integer pageCnt) {
+        this.pageCnt = pageCnt;
+    }
+
+    public Integer getOffset() {
+        if (null != this.page && this.page > 0) {
+            if (null == this.pageCnt || this.pageCnt <= 0) {
+                return (this.page - 1) * 20;
+            }
+            return (this.page - 1) * this.pageCnt;
+        } else {
+            return 0;
+        }
+    }
+
+    public Integer getLength() {
+        if (null == this.pageCnt || this.pageCnt <= 0) {
+            return 20;
+        }
+        return this.pageCnt;
+    }
+
+    protected abstract Map<String, String> initAllowSortBy();
+    protected abstract Set<String> initQueryFields();
+
+    public void setAllowSortBy(Map<String, String> allowSortBy) {
+        this.allowSortBy = allowSortBy;
+    }
+
+    public Map<String, String> getAllowSortBy() {
+        return allowSortBy;
+    }
+
+    public void setQueryFields(Set<String> queryFields) {
+        this.queryFields = queryFields;
+    }
+
+    public Set<String> getQueryFields() {
+        return queryFields;
+    }
+
+    public Set<String> addQueryField(String field) {
+        queryFields.add(field);
+        return queryFields;
+    }
+
+    public Set<String> removeQueryField(String field) {
+        queryFields.remove(field);
+        return queryFields;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
+
+    public static enum SortOrder {
+        ASC("ASC"),
+        DESC("DESC");
+
+        private String value;
+
+        private SortOrder(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+}
+`
+	QueryTemp = `
+package {{ .PackagePath }}.{{ .QueryPackage }};
+
+import {{ .PackagePath }}.{{ .QueryRootPackage }}.Query;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,7 +209,7 @@ public class {{ .TableNameHump }}Query extends Query {
 }
 `
 	EntityTemp = `
-package {{ .PackagePath }}.entity;
+package {{ .PackagePath }}.{{ .EntityPackage }};
 
 import java.io.Serializable;
 
@@ -84,10 +237,10 @@ public class {{ .TableNameHump }} implements Serializable {
 }
 `
 	MapperTemp = `
-package {{ .PackagePath }}.mapper;
+package {{ .PackagePath }}.{{ .MapperPackage }};
 
-import {{ .PackagePath }}.entity.{{ .TableNameHump }};
-import {{ .PackagePath }}.model.query.{{ .TableNameHump }}Query;
+import {{ .PackagePath }}.{{ .EntityPackage }}.{{ .TableNameHump }};
+import {{ .PackagePath }}.{{ .QueryPackage }}.{{ .TableNameHump }}Query;
 import org.apache.ibatis.annotations.Mapper;
 import org.springframework.stereotype.Repository;
 
@@ -111,8 +264,8 @@ public interface {{ .TableNameHump }}Mapper {
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="{{.PackagePath}}.mapper.{{ .TableNameHump }}Mapper">
-    <resultMap id="{{- .TableNameHump -}}" type="{{- .PackagePath -}}.entity.{{- .TableNameHump -}}">
+<mapper namespace="{{.PackagePath}}.{{ .MapperPackage }}.{{ .TableNameHump }}Mapper">
+    <resultMap id="{{- .TableNameHump -}}" type="{{- .PackagePath -}}.{{- .EntityPackage -}}.{{- .TableNameHump -}}">
 	{{- range $v := .Fields -}}
 	{{- if eq $v.IsPk 1 }}
 	<id column="{{- $v.Field -}}" property="{{- $v.Property -}}" jdbcType="{{- $v.JdbcType -}}" />
@@ -192,7 +345,7 @@ public interface {{ .TableNameHump }}Mapper {
         </where>
         limit 1
     </select>
-    <update id="update" parameterType="{{.PackagePath}}.entity.{{.TableNameHump}}">
+    <update id="update" parameterType="{{.PackagePath}}.{{- .EntityPackage -}}.{{.TableNameHump}}">
         update {{ .TableName }}
         <set>
             {{- range $v := .Fields -}}
@@ -205,7 +358,7 @@ public interface {{ .TableNameHump }}Mapper {
         </set>
         where {{ .Pk }} = #{ {{ .PkHump }} }
     </update>
-    <insert id="insert" parameterType="{{ .PackagePath }}.entity.{{ .TableNameHump }}" keyProperty="{{ .Pk }}" useGeneratedKeys="true">
+    <insert id="insert" parameterType="{{ .PackagePath }}.{{ .EntityPackage }}.{{ .TableNameHump }}" keyProperty="{{ .Pk }}" useGeneratedKeys="true">
         insert into {{ .TableName }}
         <trim prefix="(" suffix=")" suffixOverrides=",">
             {{- range $v := .Fields -}}

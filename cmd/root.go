@@ -19,11 +19,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/spf13/cobra"
 	"mybatis-export/config"
 	"mybatis-export/util"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -35,11 +37,18 @@ var (
 	password     string
 	port         *uint16
 	databaseName string
-	tableName    string
+	tableNames   []string
 	tablePrefix  string
 
-	rootPath    string
-	packagePath string
+	rootPath         string
+	rootPackagePath  string
+	entityPackage    string
+	mapperXmlPath    string
+	mapperPackage    string
+	queryPackage     string
+	queryRootPackage string
+
+	conflictOverwriteAll bool = false
 
 	dbIns    *sql.DB
 	interact util.Interact
@@ -64,13 +73,17 @@ type column struct {
 }
 
 type TemplateData struct {
-	Pk            string
-	PkHump        string
-	PackagePath   string
-	TableNote     string
-	TableName     string
-	TableNameHump string
-	Fields        []column
+	Pk               string
+	PkHump           string
+	PackagePath      string
+	TableNote        string
+	TableName        string
+	TableNameHump    string
+	EntityPackage    string
+	QueryPackage     string
+	QueryRootPackage string
+	MapperPackage    string
+	Fields           []column
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -93,7 +106,7 @@ to quickly create a Cobra application.`,
 		//	"password: %v\n"+
 		//	"database: %v\n"+
 		//	"rootPath: %v\n"+
-		//	"packagePath: %v\n", host, *port, user, password, databaseName, rootPath, packagePath)
+		//	"rootPackagePath: %v\n", host, *port, user, password, databaseName, rootPath, rootPackagePath)
 		if "" == host {
 			host = interact.AskDBHost()
 		}
@@ -106,23 +119,72 @@ to quickly create a Cobra application.`,
 		if "" == password {
 			password = interact.AskDBPassword()
 		}
-		if databaseName == "" {
-			// fmt.Printf("Database name can not be null")
-			databaseName = interact.AskDBName()
+		if rootPackagePath == "" {
+			rootPackagePath = interact.AskPackage()
 		}
-		if packagePath == "" {
-			packagePath = interact.AskPackage()
+		if "" == entityPackage {
+			entityPackage = interact.AskEntityPackage()
+		}
+		if "" == mapperPackage {
+			mapperPackage = interact.AskMapperPackage()
+		}
+		if "" == mapperXmlPath {
+			mapperXmlPath = interact.AskMapperXmlPath()
+		}
+		if "" == queryPackage {
+			queryPackage = interact.AskQueryPackage()
+		}
+		if index := strings.LastIndex(queryPackage, "."); -1 == index {
+			queryRootPackage = queryPackage
+		} else {
+			queryRootPackage = queryPackage[0:index]
 		}
 		if "" == rootPath {
 			rootPath = interact.AskExportPath()
 		}
-		// 连接数据库
-		var err error
+
+		tableNames = nil
+		if nil == args || 0 == len(args) {
+			databaseName = ""
+		} else {
+			if 1 < len(args) {
+				tableNames = make([]string, len(args)-1)
+			}
+			for i, v := range args {
+				if 0 == i {
+					databaseName = strings.Trim(v, "\"' \t\n")
+				} else {
+					tableNames[i-1] = strings.Trim(v, "\"' \t\n")
+				}
+			}
+		}
+		if databaseName == "" {
+			// fmt.Printf("Database name can not be null")
+			databaseName = interact.AskDBName()
+		}
+		if tablePrefix == "" {
+			tablePrefix = interact.AskTablePrefix()
+		}
+		if nil == tableNames || 0 == len(tableNames) { // 未填写tableNames的情况下
+			isAllTable := interact.AskIsAllTableOfDB()
+			if isAllTable {
+				tableNames = nil
+			} else {
+				tableNames = interact.AskTables()
+			}
+		}
+
+		return nil
+	},
+	Run: func(cmd *cobra.Command, args []string) {
 		dsn := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?parseTime=1&multiStatements=1&charset=utf8mb4&collation=utf8mb4_unicode_ci", user, password, "tcp", host, *port, "information_schema")
+		var err error
 		dbIns, err = sql.Open("mysql", dsn)
 		if nil != err {
-			return errors.New(fmt.Sprintf("Open mysql failed, err: %v", err))
+			color.Red("Open mysql failed, err: %v\n", err)
+			return
 		}
+		defer dbIns.Close()
 		//最大连接周期，超过时间的连接就close
 		dbIns.SetConnMaxLifetime(100 * time.Second)
 		//设置最大连接数
@@ -133,14 +195,19 @@ to quickly create a Cobra application.`,
 		//if err = dbIns.Ping(); nil != err {
 		//    return errors.New(fmt.Sprintf("Connect to mysql faild, err: %v", err))
 		//}
-		return nil
-	},
-	Run: func(cmd *cobra.Command, args []string) {
 		// 查询出所有的表
 		var rows *sql.Rows
-		var err error
-		if tableName != "" {
-			rows, err = dbIns.Query("select TABLE_NAME as TableName, TABLE_COMMENT as `Comment` from TABLES where TABLE_SCHEMA = ? and TABLE_NAME = ?", databaseName, tableName)
+		if nil != tableNames && 0 < len(tableNames) {
+			for i, v := range tableNames {
+				tableNames[i] = strings.Trim(v, "\"' \t\n")
+			}
+			// params := make([]string, len(tableNames)+1)
+			params := []interface{}{databaseName}
+
+			for _, v := range tableNames {
+				params = append(params, v)
+			}
+			rows, err = dbIns.Query("select TABLE_NAME as TableName, TABLE_COMMENT as `Comment` from TABLES where TABLE_SCHEMA = ? and TABLE_NAME in (?"+strings.Repeat(",?", len(tableNames)-1)+")", params...)
 			if nil != err {
 				fmt.Printf("Query all table of %s failed. err: %v\n", databaseName, err)
 				dbIns.Close()
@@ -155,6 +222,19 @@ to quickly create a Cobra application.`,
 			}
 		}
 		defer rows.Close()
+		// 初始化query
+		var templateData TemplateData
+		templateData.EntityPackage = entityPackage
+		templateData.QueryPackage = queryPackage
+		templateData.MapperPackage = mapperPackage
+		templateData.QueryRootPackage = queryRootPackage
+		templateData.PackagePath = rootPackagePath
+		templateData.TableNameHump = "Query"
+		if err := generate("query", config.BaseQueryTemp, queryRootPackage, "java", &templateData); nil != err {
+			color.Red("Generate base query[%s.%s.Query] failed, err: %s\n", rootPackagePath, queryRootPackage, err.Error())
+		} else {
+			color.Green("Generate base query[%s.%s.Query] success.", rootPackagePath, queryRootPackage)
+		}
 		for rows.Next() {
 			var tableName table
 			if err := rows.Scan(&tableName.TableName, &tableName.Comment); nil != err {
@@ -163,10 +243,14 @@ to quickly create a Cobra application.`,
 			}
 			var templateData TemplateData
 			templateData.TableName = tableName.TableName
+			templateData.EntityPackage = entityPackage
+			templateData.QueryPackage = queryPackage
+			templateData.MapperPackage = mapperPackage
+			templateData.QueryRootPackage = queryRootPackage
 			templateData.TableNameHump = toHump(strings.TrimPrefix(tableName.TableName, tablePrefix), true)
 			templateData.TableNote = tableName.Comment
-			templateData.PackagePath = packagePath
-			generateTable(templateData)
+			templateData.PackagePath = rootPackagePath
+			generateTable(&templateData)
 		}
 	},
 }
@@ -199,15 +283,17 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "", "The host of mysql")
 	port = rootCmd.PersistentFlags().Uint16P("port", "P", 0, "The port of mysql")
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "u", "", "The username of mysql")
+	rootCmd.PersistentFlags().StringVarP(&entityPackage, "entity-package", "e", "", "The package of the entity that needs to be generated, not including the root package")
+	rootCmd.PersistentFlags().StringVarP(&mapperPackage, "mapper-package", "m", "", "The package of the mapper that needs to be generated, not including the root package")
+	rootCmd.PersistentFlags().StringVarP(&mapperXmlPath, "mapper-path", "M", "", "The path of the mapper xml that needs to be generated, not including the root package")
+	rootCmd.PersistentFlags().StringVarP(&queryPackage, "query-package", "q", "", "The package of the query that needs to be generated, not including the root package")
 	rootCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "the password of mysql")
-	rootCmd.PersistentFlags().StringVarP(&databaseName, "database", "D", "", "the database of mysql")
-	rootCmd.PersistentFlags().StringVarP(&tableName, "table", "t", "", "the table name of database")
 	rootCmd.PersistentFlags().StringVar(&rootPath, "root-path", "", "the path of export directory")
-	rootCmd.PersistentFlags().StringVar(&packagePath, "package", "", "the package path of generate, e.g: \"work.bottle\"")
+	rootCmd.PersistentFlags().StringVar(&rootPackagePath, "package", "", "the package path of generate, e.g: \"work.bottle\"")
 	rootCmd.PersistentFlags().StringVar(&tablePrefix, "table-prefix", "", "the table prefix of table name")
 }
 
-func generateTable(temp TemplateData) {
+func generateTable(temp *TemplateData) {
 	// fmt.Printf("TableName is : %v, TableNameHump: %v, pointer: %p\n", temp.TableName, temp.TableNameHump, &temp)
 	rows, err := dbIns.Query("select `COLUMN_NAME` as Field, `DATA_TYPE` as DataType, `COLUMN_KEY` as `Index`, `COLUMN_COMMENT` as Comment from `COLUMNS` where TABLE_NAME = ?", temp.TableName)
 	if nil != err {
@@ -295,45 +381,88 @@ func generateTable(temp TemplateData) {
 		// fmt.Printf("Field: %v, Property: %v, DataType: %v, Index: %v, IsIndex: %v, IsPk: %v, Comment: %v\n", column.Field, column.Property, column.DataType, column.Index, column.IsIndex, column.IsPk, column.Comment)
 	}
 
-	fmt.Printf("\n\n====================================ENTITY[%s]=======================================\n\n", temp.TableNameHump)
-	tempEntity, err := template.New("Entity").Parse(config.EntityTemp) // （2）解析模板
-	if err != nil {
-		panic(err)
+	if err := generate("entity", config.EntityTemp, entityPackage, "java", temp); nil != err {
+		color.Red("Generate entity[%s.%s.%s] failed, err: %s\n", temp.PackagePath, temp.EntityPackage, temp.TableNameHump, err.Error())
+	} else {
+		color.Green("Generate entity[%s.%s.%s] success.", temp.PackagePath, temp.EntityPackage, temp.TableNameHump)
 	}
-	err = tempEntity.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
-	if err != nil {
-		panic(err)
+	if err := generate("query", config.QueryTemp, queryPackage, "java", temp); nil != err {
+		color.Red("Generate query[%s.%s.%sQuery] failed, err: %s\n", temp.PackagePath, temp.QueryPackage, temp.TableNameHump, err.Error())
+	} else {
+		color.Green("Generate query[%s.%s.%sQuery] success.", temp.PackagePath, temp.QueryPackage, temp.TableNameHump)
+	}
+	if err := generate("mapper", config.MapperTemp, mapperPackage, "java", temp); nil != err {
+		color.Red("Generate mapper[%s.%s.%sMapper] failed, err: %s\n", temp.PackagePath, temp.MapperPackage, temp.TableNameHump, err.Error())
+	} else {
+		color.Green("Generate mapper[%s.%s.%sMapper] success.", temp.PackagePath, temp.MapperPackage, temp.TableNameHump)
+	}
+	if err := generate("mapper xml", config.MapperXmlTemp, mapperXmlPath, "xml", temp); nil != err {
+		color.Red("Generate mapper xml[%s%c%s%c%sMapper.xml] failed, err: %s\n", temp.PackagePath, filepath.Separator, mapperXmlPath, filepath.Separator, temp.TableNameHump, err.Error())
+	} else {
+		color.Green("Generate mapper xml[%s%c%s%c%sMapper.xml] success.", temp.PackagePath, filepath.Separator, mapperXmlPath, filepath.Separator, temp.TableNameHump)
+	}
+}
+
+func generate(title, tempStr, pkg, suffix string, temp *TemplateData) error {
+	var errStr string
+	var fPath string
+	if "" == pkg {
+		fPath = fmt.Sprintf("%s%c%s.%s", rootPath, filepath.Separator, temp.TableNameHump, suffix)
+	} else {
+		fPath = fmt.Sprintf("%s%c%s%c%s.%s", rootPath, filepath.Separator,
+			strings.ReplaceAll(pkg, ".", string(filepath.Separator)), filepath.Separator, temp.TableNameHump, suffix)
 	}
 
-	fmt.Printf("\n\n====================================QUERY[%sQuery]=======================================\n\n", temp.TableNameHump)
-	tempQuery, err := template.New("Query").Parse(config.QueryTemp) // （2）解析模板
-	if err != nil {
-		panic(err)
-	}
-	err = tempQuery.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
-	if err != nil {
-		panic(err)
+	stat, err := os.Stat(fPath)
+	if nil != err {
+		if !os.IsNotExist(err) {
+			fmt.Sprintf(errStr, "Failed to generate %s, err: %v", title, err)
+			return errors.New(errStr)
+		}
+	} else {
+		if stat.IsDir() {
+			fmt.Sprintf(errStr, "The file already exists, but it is a directory[%s]", fPath)
+			return errors.New(errStr)
+		} else {
+			if conflictOverwriteAll {
+				// do nothing
+			} else {
+				isOverwrite := interact.AskIsOverwrite(fPath)
+				if "overwrite all" == isOverwrite {
+					conflictOverwriteAll = true
+				} else if "overwrite" == isOverwrite {
+					// do nothing
+				} else {
+					// do not overwrite
+					return nil
+				}
+			}
+		}
 	}
 
-	fmt.Printf("\n\n====================================MAPPER[%sMapper]=======================================\n\n", temp.TableNameHump)
-	tempMapper, err := template.New("Mapper").Parse(config.MapperTemp) // （2）解析模板
-	if err != nil {
-		panic(err)
+	// 生成它的父目录
+	dir, _ := filepath.Split(fPath)
+	if err = os.MkdirAll(dir, 0750); nil != err {
+		fmt.Sprintf(errStr, "Create %s directory failed, err: %v", title, err)
+		return errors.New(errStr)
 	}
-	err = tempMapper.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
-	if err != nil {
-		panic(err)
+	file, err := os.OpenFile(fPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0750)
+	if nil != err {
+		fmt.Sprintf(errStr, "Open file[%s] failed, err: %v", fPath, err)
+		return errors.New(errStr)
 	}
-
-	fmt.Printf("\n\n====================================MAPPER_XML[%sMapper.xml]=======================================\n\n", temp.TableNameHump)
-	templ, err := template.New("MapperXMLFile").Parse(config.MapperXmlTemp) // （2）解析模板
+	defer file.Close()
+	tempEntity, err := template.New(title).Parse(tempStr) // （2）解析模板
 	if err != nil {
-		panic(err)
+		errStr = "template parse failed"
+		return errors.New(errStr)
 	}
-	err = templ.Execute(os.Stdout, temp) //（3）数据驱动模板，将name的值填充到模板中
+	err = tempEntity.Execute(file, temp) //（3）数据驱动模板，将name的值填充到模板中
 	if err != nil {
-		panic(err)
+		errStr = "write to file failed"
+		return errors.New(errStr)
 	}
+	return nil
 }
 
 func toHump(source string, first bool) string {
