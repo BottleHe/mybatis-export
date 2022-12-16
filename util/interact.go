@@ -142,8 +142,8 @@ var (
 		Default: "entity",
 	}
 	mapperXmlPathQs = &survey.Input{
-		Message: "Please provide mapper xml path, do not need to include the root path. The default value is \"mapper\"",
-		Default: "mapper",
+		Message: "Please provide mapper xml path, do not need to include the root path. The default value is \"resource\"",
+		Default: "resource",
 	}
 	mapperPackageQs = &survey.Input{
 		Message: "Please provide mapper package, do not need to include the root package. The default value is \"mapper\"",
@@ -271,7 +271,7 @@ func (interact *Interact) AskMapperPackage() string {
 func (interact *Interact) AskMapperXmlPath() string {
 	var mapperXmlPath string
 	if err := survey.AskOne(mapperXmlPathQs, &mapperXmlPath); nil != err {
-		return "mapper"
+		return "resource"
 	}
 	return mapperXmlPath
 }
