@@ -51,9 +51,7 @@ var (
 	overwriteAll     *bool
 
 	conflictOverwriteAll bool = false
-
-	dbIns    *sql.DB
-	interact util.Interact
+	interact             util.Interact
 )
 
 type table struct {
@@ -188,20 +186,20 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		dsn := fmt.Sprintf("%s:%s@%s(%s:%d)/%s?parseTime=1&multiStatements=1&charset=utf8mb4&collation=utf8mb4_unicode_ci", user, password, "tcp", host, *port, "information_schema")
 		var err error
-		dbIns, err = sql.Open("mysql", dsn)
+		config.DbIns, err = sql.Open("mysql", dsn)
 		if nil != err {
 			color.Red("Open mysql failed, err: %v\n", err)
 			return
 		}
-		defer dbIns.Close()
+		defer config.DbIns.Close()
 		//最大连接周期，超过时间的连接就close
-		dbIns.SetConnMaxLifetime(100 * time.Second)
+		config.DbIns.SetConnMaxLifetime(100 * time.Second)
 		//设置最大连接数
-		dbIns.SetMaxOpenConns(100)
+		config.DbIns.SetMaxOpenConns(100)
 		//设置闲置连接数
-		dbIns.SetMaxIdleConns(16)
+		config.DbIns.SetMaxIdleConns(16)
 
-		//if err = dbIns.Ping(); nil != err {
+		//if err = config.DbIns.Ping(); nil != err {
 		//    return errors.New(fmt.Sprintf("Connect to mysql faild, err: %v", err))
 		//}
 		// 查询出所有的表
@@ -216,17 +214,17 @@ to quickly create a Cobra application.`,
 			for _, v := range tableNames {
 				params = append(params, v)
 			}
-			rows, err = dbIns.Query("select TABLE_NAME as TableName, TABLE_COMMENT as `Comment` from TABLES where TABLE_SCHEMA = ? and TABLE_NAME in (?"+strings.Repeat(",?", len(tableNames)-1)+")", params...)
+			rows, err = config.DbIns.Query("select TABLE_NAME as TableName, TABLE_COMMENT as `Comment` from TABLES where TABLE_SCHEMA = ? and TABLE_NAME in (?"+strings.Repeat(",?", len(tableNames)-1)+")", params...)
 			if nil != err {
 				fmt.Printf("Query all table of %s failed. err: %v\n", databaseName, err)
-				dbIns.Close()
+				config.DbIns.Close()
 				os.Exit(-1)
 			}
 		} else {
-			rows, err = dbIns.Query("select TABLE_NAME as TableName, TABLE_COMMENT as `Comment` from TABLES where TABLE_SCHEMA = ?", databaseName)
+			rows, err = config.DbIns.Query("select TABLE_NAME as TableName, TABLE_COMMENT as `Comment` from TABLES where TABLE_SCHEMA = ?", databaseName)
 			if nil != err {
 				fmt.Printf("Query all table of %s failed. err: %v\n", databaseName, err)
-				dbIns.Close()
+				config.DbIns.Close()
 				os.Exit(-1)
 			}
 		}
@@ -306,7 +304,7 @@ func init() {
 
 func generateTable(temp *TemplateData) {
 	// fmt.Printf("TableName is : %v, TableNameHump: %v, pointer: %p\n", temp.TableName, temp.TableNameHump, &temp)
-	rows, err := dbIns.Query("select `COLUMN_NAME` as Field, `DATA_TYPE` as DataType, `COLUMN_KEY` as `Index`, `COLUMN_COMMENT` as Comment from `COLUMNS` where TABLE_SCHEMA = ? AND TABLE_NAME = ?", databaseName, temp.TableName)
+	rows, err := config.DbIns.Query("select `COLUMN_NAME` as Field, `DATA_TYPE` as DataType, `COLUMN_KEY` as `Index`, `COLUMN_COMMENT` as Comment from `COLUMNS` where TABLE_SCHEMA = ? AND TABLE_NAME = ?", databaseName, temp.TableName)
 	if nil != err {
 		fmt.Println("Query table %v failed, err: %v", temp.TableName, err)
 		return

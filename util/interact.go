@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/AlecAivazis/survey/v2/terminal"
+	"mybatis-export/config"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -165,6 +167,10 @@ func (interact *Interact) AskDBHost() string {
 	}{}
 	err := survey.Ask(hostQs, &answers)
 	if nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return "localhost"
 	}
 	return answers.Host
@@ -175,6 +181,10 @@ func (Interact *Interact) AskDBPort() uint16 {
 		Port uint16 `survey:"port"`
 	}{}
 	if err := survey.Ask(portQs, &answers); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return 3306
 	}
 	return answers.Port
@@ -186,6 +196,10 @@ func (interact *Interact) AskDBUser() string {
 	}{}
 	err := survey.Ask(userQs, &answers)
 	if nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return "root"
 	}
 	return answers.User
@@ -197,6 +211,10 @@ func (interact *Interact) AskDBPassword() string {
 	}{}
 	err := survey.Ask(passwdQs, &answers)
 	if nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return ""
 	}
 	return answers.Password
@@ -208,6 +226,10 @@ func (interact *Interact) AskDBName() string {
 	}{}
 	err := survey.Ask(databaseQs, &answers)
 	if nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return ""
 	}
 	return answers.DbName
@@ -219,6 +241,10 @@ func (interact *Interact) AskPackage() string {
 	}{}
 	err := survey.Ask(packageQs, &answers)
 	if nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return ""
 	}
 	return answers.Value
@@ -229,7 +255,15 @@ func (interact *Interact) AskExportPath() string {
 		Value string `survey:"exportPath"`
 	}{}
 	err := survey.Ask(exportPathQs, &answers)
-	if nil != err || "" == answers.Value {
+	if nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
+		wd, _ := os.Getwd()
+		return wd
+	}
+	if "" == answers.Value {
 		wd, _ := os.Getwd()
 		return wd
 	}
@@ -239,6 +273,10 @@ func (interact *Interact) AskExportPath() string {
 func (interact *Interact) AskIsAllTableOfDB() bool {
 	ret := true
 	if err := survey.AskOne(tableNamesIsAllQs, &ret); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return true
 	}
 	return ret
@@ -248,13 +286,23 @@ func (interact *Interact) AskTables() []string {
 	answers := struct {
 		Value string `survey:"tableNames"`
 	}{}
-	survey.Ask(tableNamesQs, &answers)
+	if err := survey.Ask(tableNamesQs, &answers); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
+		return []string{}
+	}
 	return strings.Split(answers.Value, " ")
 }
 
 func (interact *Interact) AskEntityPackage() string {
 	var entityPackage string
 	if err := survey.AskOne(entityPackageQs, &entityPackage); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return "entity"
 	}
 	return entityPackage
@@ -263,6 +311,10 @@ func (interact *Interact) AskEntityPackage() string {
 func (interact *Interact) AskMapperPackage() string {
 	var mapperPackage string
 	if err := survey.AskOne(mapperPackageQs, &mapperPackage); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return "mapper"
 	}
 	return mapperPackage
@@ -271,6 +323,10 @@ func (interact *Interact) AskMapperPackage() string {
 func (interact *Interact) AskMapperXmlPath() string {
 	var mapperXmlPath string
 	if err := survey.AskOne(mapperXmlPathQs, &mapperXmlPath); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return "resource"
 	}
 	return mapperXmlPath
@@ -279,6 +335,10 @@ func (interact *Interact) AskMapperXmlPath() string {
 func (interact *Interact) AskQueryPackage() string {
 	var queryPackage string
 	if err := survey.AskOne(queryPackageQs, &queryPackage); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return "model.query"
 	}
 	return queryPackage
@@ -293,6 +353,10 @@ func (interact *Interact) AskIsOverwrite(what string) string {
 	}
 	var ret string = "no"
 	if err := survey.AskOne(overwriteQs, &ret); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return ret
 	}
 	return ret
@@ -301,7 +365,17 @@ func (interact *Interact) AskIsOverwrite(what string) string {
 func (interact *Interact) AskTablePrefix() string {
 	var tablePrefix string
 	if err := survey.AskOne(tablePrefixQs, &tablePrefix); nil != err {
+		if terminal.InterruptErr == err {
+			Exit()
+			os.Exit(0)
+		}
 		return ""
 	}
 	return tablePrefix
+}
+
+func Exit() {
+	if nil != config.DbIns {
+		config.DbIns.Close()
+	}
 }
