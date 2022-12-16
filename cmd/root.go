@@ -47,6 +47,8 @@ var (
 	mapperPackage    string
 	queryPackage     string
 	queryRootPackage string
+	allTable         *bool
+	overwriteAll     *bool
 
 	conflictOverwriteAll bool = false
 
@@ -165,13 +167,20 @@ to quickly create a Cobra application.`,
 		if tablePrefix == "" {
 			tablePrefix = interact.AskTablePrefix()
 		}
-		if nil == tableNames || 0 == len(tableNames) { // 未填写tableNames的情况下
-			isAllTable := interact.AskIsAllTableOfDB()
-			if isAllTable {
-				tableNames = nil
-			} else {
-				tableNames = interact.AskTables()
+		if *allTable {
+			tableNames = nil
+		} else {
+			if nil == tableNames || 0 == len(tableNames) { // 未填写tableNames的情况下
+				isAllTable := interact.AskIsAllTableOfDB()
+				if isAllTable {
+					tableNames = nil
+				} else {
+					tableNames = interact.AskTables()
+				}
 			}
+		}
+		if *overwriteAll {
+			conflictOverwriteAll = true
 		}
 
 		return nil
@@ -230,7 +239,7 @@ to quickly create a Cobra application.`,
 		templateData.QueryRootPackage = queryRootPackage
 		templateData.PackagePath = rootPackagePath
 		templateData.TableNameHump = "Query"
-		if err := generate("query", config.BaseQueryTemp, queryRootPackage, "java", &templateData); nil != err {
+		if err := generate("", config.BaseQueryTemp, queryRootPackage, "java", &templateData); nil != err {
 			color.Red("Generate base query[%s.%s.Query] failed, err: %s\n", rootPackagePath, queryRootPackage, err.Error())
 		} else {
 			color.Green("Generate base query[%s.%s.Query] success.", rootPackagePath, queryRootPackage)
@@ -291,11 +300,13 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&rootPath, "root-path", "", "the path of export directory")
 	rootCmd.PersistentFlags().StringVar(&rootPackagePath, "package", "", "the package path of generate, e.g: \"work.bottle\"")
 	rootCmd.PersistentFlags().StringVar(&tablePrefix, "table-prefix", "", "the table prefix of table name")
+	overwriteAll = rootCmd.PersistentFlags().BoolP("overwrite", "o", false, "overwrite all of exists files")
+	allTable = rootCmd.PersistentFlags().BoolP("all-table", "a", false, "generator all of table")
 }
 
 func generateTable(temp *TemplateData) {
 	// fmt.Printf("TableName is : %v, TableNameHump: %v, pointer: %p\n", temp.TableName, temp.TableNameHump, &temp)
-	rows, err := dbIns.Query("select `COLUMN_NAME` as Field, `DATA_TYPE` as DataType, `COLUMN_KEY` as `Index`, `COLUMN_COMMENT` as Comment from `COLUMNS` where TABLE_NAME = ?", temp.TableName)
+	rows, err := dbIns.Query("select `COLUMN_NAME` as Field, `DATA_TYPE` as DataType, `COLUMN_KEY` as `Index`, `COLUMN_COMMENT` as Comment from `COLUMNS` where TABLE_SCHEMA = ? AND TABLE_NAME = ?", databaseName, temp.TableName)
 	if nil != err {
 		fmt.Println("Query table %v failed, err: %v", temp.TableName, err)
 		return
@@ -381,7 +392,7 @@ func generateTable(temp *TemplateData) {
 		// fmt.Printf("Field: %v, Property: %v, DataType: %v, Index: %v, IsIndex: %v, IsPk: %v, Comment: %v\n", column.Field, column.Property, column.DataType, column.Index, column.IsIndex, column.IsPk, column.Comment)
 	}
 
-	if err := generate("entity", config.EntityTemp, entityPackage, "java", temp); nil != err {
+	if err := generate("", config.EntityTemp, entityPackage, "java", temp); nil != err {
 		color.Red("Generate entity[%s.%s.%s] failed, err: %s\n", temp.PackagePath, temp.EntityPackage, temp.TableNameHump, err.Error())
 	} else {
 		color.Green("Generate entity[%s.%s.%s] success.", temp.PackagePath, temp.EntityPackage, temp.TableNameHump)
@@ -396,7 +407,7 @@ func generateTable(temp *TemplateData) {
 	} else {
 		color.Green("Generate mapper[%s.%s.%sMapper] success.", temp.PackagePath, temp.MapperPackage, temp.TableNameHump)
 	}
-	if err := generate("mapper xml", config.MapperXmlTemp, mapperXmlPath, "xml", temp); nil != err {
+	if err := generate("mapper", config.MapperXmlTemp, mapperXmlPath, "xml", temp); nil != err {
 		color.Red("Generate mapper xml[%s%c%s%c%sMapper.xml] failed, err: %s\n", temp.PackagePath, filepath.Separator, mapperXmlPath, filepath.Separator, temp.TableNameHump, err.Error())
 	} else {
 		color.Green("Generate mapper xml[%s%c%s%c%sMapper.xml] success.", temp.PackagePath, filepath.Separator, mapperXmlPath, filepath.Separator, temp.TableNameHump)
@@ -407,10 +418,10 @@ func generate(title, tempStr, pkg, suffix string, temp *TemplateData) error {
 	var errStr string
 	var fPath string
 	if "" == pkg {
-		fPath = fmt.Sprintf("%s%c%s.%s", rootPath, filepath.Separator, temp.TableNameHump, suffix)
+		fPath = fmt.Sprintf("%s%c%s%s.%s", rootPath, filepath.Separator, temp.TableNameHump, toHump(title, true), suffix)
 	} else {
-		fPath = fmt.Sprintf("%s%c%s%c%s.%s", rootPath, filepath.Separator,
-			strings.ReplaceAll(pkg, ".", string(filepath.Separator)), filepath.Separator, temp.TableNameHump, suffix)
+		fPath = fmt.Sprintf("%s%c%s%c%s%s.%s", rootPath, filepath.Separator,
+			strings.ReplaceAll(pkg, ".", string(filepath.Separator)), filepath.Separator, temp.TableNameHump, toHump(title, true), suffix)
 	}
 
 	stat, err := os.Stat(fPath)
@@ -466,6 +477,9 @@ func generate(title, tempStr, pkg, suffix string, temp *TemplateData) error {
 }
 
 func toHump(source string, first bool) string {
+	if "" == source {
+		return ""
+	}
 	split := strings.Split(source, "_")
 	for i, s := range split {
 		if !first && 0 == i {

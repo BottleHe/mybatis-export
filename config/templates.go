@@ -1,8 +1,7 @@
 package config
 
 const (
-	BaseQueryTemp = `
-package {{ .PackagePath }}.{{ .QueryRootPackage }};
+	BaseQueryTemp = `package {{ .PackagePath }}.{{ .QueryRootPackage }};
 
 import java.io.Serializable;
 import java.util.Map;
@@ -154,8 +153,7 @@ public abstract class Query<T> implements Serializable {
     }
 }
 `
-	QueryTemp = `
-package {{ .PackagePath }}.{{ .QueryPackage }};
+	QueryTemp = `package {{ .PackagePath }}.{{ .QueryPackage }};
 
 import {{ .PackagePath }}.{{ .QueryRootPackage }}.Query;
 
@@ -208,8 +206,7 @@ public class {{ .TableNameHump }}Query extends Query {
     {{- end }}
 }
 `
-	EntityTemp = `
-package {{ .PackagePath }}.{{ .EntityPackage }};
+	EntityTemp = `package {{ .PackagePath }}.{{ .EntityPackage }};
 
 import java.io.Serializable;
 
@@ -236,8 +233,7 @@ public class {{ .TableNameHump }} implements Serializable {
     {{- end }}
 }
 `
-	MapperTemp = `
-package {{ .PackagePath }}.{{ .MapperPackage }};
+	MapperTemp = `package {{ .PackagePath }}.{{ .MapperPackage }};
 
 import {{ .PackagePath }}.{{ .EntityPackage }}.{{ .TableNameHump }};
 import {{ .PackagePath }}.{{ .QueryPackage }}.{{ .TableNameHump }}Query;
@@ -258,8 +254,7 @@ public interface {{ .TableNameHump }}Mapper {
     public Integer update({{ .TableNameHump }} entity);
 }
 `
-	MapperXmlTemp = `
-<!-- {{ .TableNote }} -->
+	MapperXmlTemp = `<!-- {{ .TableNote }} -->
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
@@ -268,9 +263,9 @@ public interface {{ .TableNameHump }}Mapper {
     <resultMap id="{{- .TableNameHump -}}" type="{{- .PackagePath -}}.{{- .EntityPackage -}}.{{- .TableNameHump -}}">
 	{{- range $v := .Fields -}}
 	{{- if eq $v.IsPk 1 }}
-	<id column="{{- $v.Field -}}" property="{{- $v.Property -}}" jdbcType="{{- $v.JdbcType -}}" />
+		<id column="{{- $v.Field -}}" property="{{- $v.Property -}}" jdbcType="{{- $v.JdbcType -}}" />
 	{{- else }}
-	<result column="{{ $v.Field }}" property="{{ $v.Property }}" jdbcType="{{ $v.JdbcType }}" />
+		<result column="{{ $v.Field }}" property="{{ $v.Property }}" jdbcType="{{ $v.JdbcType }}" />
 	{{- end -}}
 	{{- end }}
     </resultMap>
