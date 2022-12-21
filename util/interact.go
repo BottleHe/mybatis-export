@@ -352,7 +352,7 @@ func (interact *Interact) AskIsOverwrite(what string) string {
 	msg := fmt.Sprintf("The file \"%s\" already exists, whether to overwrite", what)
 	overwriteQs := &survey.Select{
 		Message: msg,
-		Options: []string{"overwrite", "no", "overwrite all"},
+		Options: []string{"overwrite", "no", "overwrite all", "no all"},
 		Default: "no",
 	}
 	var ret string = "no"

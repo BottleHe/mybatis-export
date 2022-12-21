@@ -53,6 +53,7 @@ var (
 	overwriteAll     *bool
 
 	conflictOverwriteAll bool = false
+	conflictNoAll             = false
 	interact             util.Interact
 )
 
@@ -445,6 +446,9 @@ func generate(title, tempStr, pkg, suffix string, temp *TemplateData) error {
 			fmt.Sprintf(errStr, "The file already exists, but it is a directory[%s]", fPath)
 			return errors.New(errStr)
 		} else {
+			if conflictNoAll {
+				return nil
+			}
 			if conflictOverwriteAll {
 				// do nothing
 			} else {
@@ -453,6 +457,9 @@ func generate(title, tempStr, pkg, suffix string, temp *TemplateData) error {
 					conflictOverwriteAll = true
 				} else if "overwrite" == isOverwrite {
 					// do nothing
+				} else if "no all" == isOverwrite {
+					conflictNoAll = true
+					return nil
 				} else {
 					// do not overwrite
 					return nil
