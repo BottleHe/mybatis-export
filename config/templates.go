@@ -299,7 +299,7 @@ public interface {{ .TableNameHump }}Mapper {
                 ${sortBy}
             </when>
             <otherwise>
-                id
+                {{ .Pk }}
             </otherwise>
         </choose>
         <choose>
@@ -307,7 +307,7 @@ public interface {{ .TableNameHump }}Mapper {
                 ${sortOrder}
             </when>
             <otherwise>
-                desc
+                asc
             </otherwise>
         </choose>
         limit
@@ -330,7 +330,7 @@ public interface {{ .TableNameHump }}Mapper {
         </choose>
     </select>
     <select id="count" resultType="java.lang.Integer">
-        select count(id) as cnt from {{.TableName}}
+        select count(*) as cnt from {{.TableName}}
         <where>
 			{{- range $v := .Fields -}}
 			{{ if or (eq $v.IsIndex 1) (eq $v.IsPk 1) }}
