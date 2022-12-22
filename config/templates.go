@@ -252,6 +252,8 @@ public interface {{ .TableNameHump }}Mapper {
     public Integer insert({{ .TableNameHump }} entity);
 
     public Integer update({{ .TableNameHump }} entity);
+
+	public Integer delete(@Param("{{ .Pk }}") {{ .PkType }} {{ .Pk }});
 }
 `
 	MapperXmlTemp = `<!-- {{ .TableNote }} -->

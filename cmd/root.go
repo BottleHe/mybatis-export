@@ -78,6 +78,7 @@ type column struct {
 type TemplateData struct {
 	Pk               string
 	PkHump           string
+	PkType           string
 	PackagePath      string
 	TableNote        string
 	TableName        string
@@ -343,61 +344,117 @@ func generateTable(temp *TemplateData) {
 		case "int", "integer", "INT", "INTEGER":
 			column.JdbcType = "INTEGER"
 			column.JavaType = "Integer"
+			if column.IsPk == 1 {
+				temp.PkType = "Integer"
+			}
 		case "mediumint", "MEDIUMINT":
 			column.JdbcType = "INTEGER"
 			column.JavaType = "Integer"
+			if column.IsPk == 1 {
+				temp.PkType = "Integer"
+			}
 		case "varchar", "VARCHAR":
 			column.JdbcType = "VARCHAR"
 			column.JavaType = "String"
+			if column.IsPk == 1 {
+				temp.PkType = "String"
+			}
 		case "tinyint", "TINYINT":
 			column.JdbcType = "TINYINT"
 			column.JavaType = "Integer"
+			if column.IsPk == 1 {
+				temp.PkType = "Integer"
+			}
 		case "timestamp", "datetime", "TIMESTAMP", "DATETIME":
 			column.JdbcType = "TIMESTAMP"
 			column.JavaType = "java.sql.Timestamp"
+			if column.IsPk == 1 {
+				temp.PkType = "java.sql.Timestamp"
+			}
 		case "time", "TIME":
 			column.JdbcType = "TIME"
 			column.JavaType = "java.sql.Time"
+			if column.IsPk == 1 {
+				temp.PkType = "java.sql.Time"
+			}
 		case "smallint", "SMALLINT":
 			column.JdbcType = "SMALLINT"
 			column.JavaType = "Integer"
+			if column.IsPk == 1 {
+				temp.PkType = "Integer"
+			}
 		case "real", "REAL":
 			column.JdbcType = "REAL"
 			column.JavaType = "Object"
+			if column.IsPk == 1 {
+				temp.PkType = "Object"
+			}
 		case "numeric", "NUMERIC":
 			column.JdbcType = "NUMERIC"
 			column.JavaType = "BigDecimal"
+			if column.IsPk == 1 {
+				temp.PkType = "BigDecimal"
+			}
 		case "float", "FLOAT":
 			column.JdbcType = "FLOAT"
 			column.JavaType = "Float"
+			if column.IsPk == 1 {
+				temp.PkType = "Float"
+			}
 		case "double", "DOUBLE":
 			column.JdbcType = "DOUBLE"
 			column.JavaType = "Double"
+			if column.IsPk == 1 {
+				temp.PkType = "Double"
+			}
 		case "decimal", "DECIMAL":
 			column.JdbcType = "DECIMAL"
 			column.JavaType = "BigDecimal"
+			if column.IsPk == 1 {
+				temp.PkType = "BigDecimal"
+			}
 		case "date", "DATE":
 			column.JdbcType = "DATE"
 			column.JavaType = "java.sql.Date"
+			if column.IsPk == 1 {
+				temp.PkType = "java.sql.Date"
+			}
 		case "clob", "CLOB", "text", "TEXT":
 			column.JdbcType = "CLOB"
 			column.JavaType = "String"
+			if column.IsPk == 1 {
+				temp.PkType = "String"
+			}
 		case "char", "CHAR":
 			column.JdbcType = "CHAR"
 			column.JavaType = "String"
+			if column.IsPk == 1 {
+				temp.PkType = "String"
+			}
 		case "blob", "BLOB":
 			column.JdbcType = "BLOB"
 			column.JavaType = "Byte[]"
+			if column.IsPk == 1 {
+				temp.PkType = "Byte[]"
+			}
 		case "bit", "BIT":
 			column.JdbcType = "BIT"
 			column.JavaType = "Byte"
+			if column.IsPk == 1 {
+				temp.PkType = "Byte"
+			}
 		case "bigint", "BIGINT":
 			column.JdbcType = "BIGINT"
 			column.JavaType = "Long"
+			if column.IsPk == 1 {
+				temp.PkType = "Long"
+			}
 		default:
 			column.JdbcType = ""
 			column.JavaType = "Object"
-
+			if column.IsPk == 1 {
+				temp.PkType = "Object"
+			}
 		}
 		temp.Fields = append(temp.Fields, column)
 		// fmt.Printf("Field: %v, Property: %v, DataType: %v, Index: %v, IsIndex: %v, IsPk: %v, Comment: %v\n", column.Field, column.Property, column.DataType, column.Index, column.IsIndex, column.IsPk, column.Comment)
