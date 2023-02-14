@@ -2,12 +2,14 @@ module mybatis-export
 
 go 1.18
 
-require github.com/spf13/cobra v1.5.0
+require (
+	github.com/AlecAivazis/survey/v2 v2.3.6
+	github.com/fatih/color v1.13.0
+	github.com/go-sql-driver/mysql v1.6.0
+	github.com/spf13/cobra v1.5.0
+)
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.6 // indirect
-	github.com/fatih/color v1.13.0 // indirect
-	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-colorable v0.1.9 // indirect
