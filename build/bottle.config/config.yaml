@@ -1,0 +1,18 @@
+host: localhost
+port: 3306
+user: root
+password: 123123
+database: ks_remote_ctl_coordination_test
+table-prefix:
+    - ks_
+#root-path: /Users/bottle/Documents/workspace/go/mybatis-export/build/mybatis-export
+root-path: ../mybatis-export
+root-package: work.bottle.demo
+entity-package: entity
+mapper-package: mapper
+query-package: entity.query
+mapper-xml-path: resource
+entity-template: template/entity.ftl
+mapper-template: template/mapper.ftl
+query-template: template/query.ftl
+mapper-xml-template: template/mapperXml.ftl
