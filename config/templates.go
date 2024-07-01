@@ -378,7 +378,10 @@ import java.io.Serializable;
 
 public class {{ .TableNameHump }} implements Serializable {
     {{ range $v := .Fields }}
-    // {{ $v.Comment }}
+
+    /**
+    * {{ $v.Comment }}
+    */
     private {{ $v.JavaType }} {{ $v.Property }};
     {{ end }}
 
@@ -413,13 +416,13 @@ public interface {{ .TableNameHump }}Mapper {
 
     int count({{ .TableNameHump }}Query query);
 
-    public List<{{ .TableNameHump }}> list({{ .TableNameHump }}Query query);
+    List<{{ .TableNameHump }}> list({{ .TableNameHump }}Query query);
 
     int insert({{ .TableNameHump }} entity);
 
     int update({{ .TableNameHump }} entity);
 
-    int delete(@Param("{{ .Pk }}") {{ .PkType }} {{ .Pk }});
+	int delete(@Param("{{ .Pk }}") {{ .PkType }} {{ .Pk }});
 }
 `
     MapperXmlTemp = `<!-- {{ .TableNote }} -->
