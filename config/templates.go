@@ -223,9 +223,12 @@ public class {{ .TableNameHump }}Query implements Serializable {
 	private Map<String, String> allowSortBy;
     private Set<String> queryFields;
 
+
     {{- range $v := .Fields -}}
     {{ if eq $v.IsIndex 1 }}
-    // {{ $v.Comment }}
+    /**
+    * {{ $v.Comment }}
+    */
     private {{ $v.JavaType }} {{ $v.Property }};
     {{- end -}}
     {{- end }}
@@ -369,8 +372,7 @@ public class {{ .TableNameHump }}Query implements Serializable {
     {{- end -}}
     {{- end -}}
     {{- end }}
-}
-`
+}`
 
     EntityTemp = `package {{ .PackagePath }}.{{ .EntityPackage }};
 
